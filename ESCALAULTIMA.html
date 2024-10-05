@@ -1,0 +1,398 @@
+<html><head><base href="https://websim.io/infinite-team-schedule/">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escala de Equipes Infinita com Frases Motivacionais</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 10px;
+    background-color: #f0f0f0;
+    font-size: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .container {
+    width: 100%;
+    max-width: 1080px;
+    height: 1920px;
+    overflow-y: auto;
+    background-color: white;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+  }
+  h1 {
+    text-align: center;
+    color: #333;
+    font-size: 1.5em;
+    margin-top: 10px;
+    margin-bottom: 5px;
+  }
+  #credits {
+    text-align: center;
+    font-size: 0.8em;
+    color: #666;
+    margin-bottom: 15px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 5px;
+    text-align: center;
+  }
+  th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+  }
+  .controls {
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+  }
+  select, input, button {
+    padding: 8px;
+    font-size: 1em;
+    width: 100%;
+    max-width: 200px;
+    box-sizing: border-box;
+  }
+  .modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 300px;
+    text-align: center;
+    position: relative;
+  }
+  #optionsModal {
+    position: absolute;
+    z-index: 1000;
+  }
+  #motivationalQuote {
+    font-size: 0.9em;
+    padding: 5px 0;
+    text-align: center;
+    margin-bottom: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  #motivationalQuote span {
+    display: inline-block;
+    padding-left: 100%;
+    animation: scroll-left 20s linear infinite;
+  }
+  @keyframes scroll-left {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+  .highlight {
+    background-color: #ffcccb;
+  }
+  .blink {
+    animation: blinker 1s linear infinite;
+  }
+  @keyframes blinker {
+    50% {
+      opacity: 0.5;
+    }
+  }
+  .month-header {
+    background-color: #4CAF50;
+    color: white;
+    font-weight: bold;
+  }
+  .current-month {
+    background-color: #e6f3ff;
+  }
+  .current-day {
+    font-weight: bold;
+    background-color: #b3d9ff;
+  }
+  .weekend {
+    background-color: #fff0f0;
+  }
+  @media screen and (max-width: 1080px) {
+    body {
+      font-size: 14px;
+    }
+    .container {
+      height: calc(100vh - 20px);
+    }
+    table {
+      font-size: 0.8em;
+    }
+    th, td {
+      padding: 3px;
+    }
+    .controls {
+      flex-direction: column;
+    }
+    select, input, button {
+      width: 100%;
+      max-width: none;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Escala de Equipes <span id="currentYear"></span></h1>
+  <div id="credits">Criado por: Setor de Tecnologia COPOM. SGT PM IGNÁCIO, CB PM SALES LIMA, CB PM PIVARO, SD PM BOTELHO.</div>
+  <div id="motivationalQuote"></div>
+  <div class="controls">
+    <input type="number" id="yearInput" placeholder="Ano">
+    <select id="teamSelect">
+      <option value="">Escolha Equipe</option>
+      <option value="A">Equipe A</option>
+      <option value="B">Equipe B</option>
+      <option value="C">Equipe C</option>
+      <option value="D">Equipe D</option>
+      <option value="E">Equipe E</option>
+    </select>
+    <button onclick="updateSchedule()">OK</button>
+  </div>
+  <div id="scheduleContainer"></div>
+</div>
+
+<div id="optionsModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h2>Opções</h2>
+    <select id="optionSelect">
+      <option value="ESCOLHA">Escolha</option>
+      <option value="DEJEM">DEJEM</option>
+      <option value="DELEGADA">DELEGADA</option>
+      <option value="TROCA DE SERVIÇO">TROCA DE SERVIÇO</option>
+      <option value="FOLGA MENSAL">FOLGA MENSAL</option>
+    </select>
+    <button onclick="saveOption()">OK</button>
+  </div>
+</div>
+
+<script>
+const dayTeamSequence = ['B', 'A', 'B', 'A', 'E'];
+const nightTeamSequence = ['D', 'E', 'C', 'D', 'C'];
+const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+const motivationalQuotes = [
+  "A persistência é o caminho do êxito.",
+  "O sucesso nasce do querer, da determinação e persistência em se chegar a um objetivo.",
+  "Nada é impossível para aquele que persiste.",
+  "O único lugar onde o sucesso vem antes do trabalho é no dicionário.",
+  "Acredite em si próprio e chegará um dia em que os outros não terão outra escolha senão acreditar com você.",
+  "O sucesso é a soma de pequenos esforços repetidos dia após dia.",
+  "Toda ação humana, quer se torne positiva ou negativa, precisa depender de motivação.",
+  "A verdadeira motivação vem de realização, desenvolvimento pessoal, satisfação no trabalho e reconhecimento.",
+  "O insucesso é apenas uma oportunidade para recomeçar com mais inteligência.",
+  "Você nunca sabe que resultados virão da sua ação. Mas se você não fizer nada, não existirão resultados.",
+  "Não espere por uma crise para descobrir o que é importante em sua vida.",
+  "A melhor maneira de prever o futuro é criá-lo.",
+  "O pessimista vê dificuldade em cada oportunidade. O otimista vê oportunidade em cada dificuldade.",
+  "Nós somos o que fazemos repetidamente. Excelência, então, não é um ato, mas um hábito.",
+  "Se você não pode fazer grandes coisas, faça pequenas coisas de uma maneira grandiosa."
+];
+
+let selectedCell = null;
+
+function getTeam(sequence, dayCount) {
+  return sequence[dayCount % sequence.length];
+}
+
+function getDayCount(year, month, day) {
+  const startDate = new Date(2024, 0, 1); // January 1, 2024 as reference
+  const currentDate = new Date(year, month, day);
+  const timeDiff = currentDate.getTime() - startDate.getTime();
+  return Math.floor(timeDiff / (1000 * 3600 * 24));
+}
+
+function generateSchedule(year) {
+  const scheduleContainer = document.getElementById('scheduleContainer');
+  scheduleContainer.innerHTML = '';
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+  const currentDay = currentDate.getDate();
+  
+  for (let month = 0; month < 12; month++) {
+    const table = document.createElement('table');
+    const monthHeader = table.createTHead();
+    const monthRow = monthHeader.insertRow();
+    const monthCell = monthRow.insertCell();
+    monthCell.colSpan = 4;
+    monthCell.textContent = months[month];
+    monthCell.className = 'month-header';
+
+    const headerRow = table.insertRow();
+    const headers = ['Dia', 'Dia da Semana', 'Equipe Dia', 'Equipe Noite'];
+    headers.forEach(header => {
+      const th = document.createElement('th');
+      th.textContent = header;
+      headerRow.appendChild(th);
+    });
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dayOfWeek = date.getDay();
+      const row = table.insertRow();
+
+      if (year === currentYear && month === currentMonth) {
+        row.className = 'current-month';
+        if (day === currentDay) {
+          row.className += ' current-day';
+        }
+      }
+
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        row.className += ' weekend';
+      }
+
+      const dayCell = row.insertCell();
+      dayCell.textContent = day;
+
+      const dayOfWeekCell = row.insertCell();
+      dayOfWeekCell.textContent = daysOfWeek[dayOfWeek];
+
+      const dayCount = getDayCount(year, month, day);
+
+      const dayTeamCell = row.insertCell();
+      dayTeamCell.textContent = getTeam(dayTeamSequence, dayCount);
+      dayTeamCell.addEventListener('dblclick', showOptionsModal);
+
+      const nightTeamCell = row.insertCell();
+      nightTeamCell.textContent = getTeam(nightTeamSequence, dayCount);
+      nightTeamCell.addEventListener('dblclick', showOptionsModal);
+
+      const savedOption = localStorage.getItem(`${year}-${month + 1}-${day}`);
+      if (savedOption) {
+        const [shift, option] = savedOption.split(':');
+        const cell = shift === 'day' ? dayTeamCell : nightTeamCell;
+        if (option !== 'ESCOLHA') {
+          cell.classList.add('blink');
+          cell.title = option;
+        }
+      }
+    }
+
+    scheduleContainer.appendChild(table);
+  }
+}
+
+function updateSchedule() {
+  const year = document.getElementById('yearInput').value || new Date().getFullYear();
+  const team = document.getElementById('teamSelect').value;
+  generateSchedule(year);
+  highlightTeam(team);
+  localStorage.setItem('selectedYear', year);
+  localStorage.setItem('selectedTeam', team);
+  updateMotivationalQuote();
+}
+
+function highlightTeam(team) {
+  const cells = document.querySelectorAll('td');
+  cells.forEach(cell => {
+    cell.classList.remove('highlight');
+    if (cell.textContent === team) {
+      cell.classList.add('highlight');
+    }
+  });
+}
+
+function showOptionsModal(event) {
+  selectedCell = event.target;
+  const modal = document.getElementById('optionsModal');
+  
+  const rect = selectedCell.getBoundingClientRect();
+  modal.style.position = 'absolute';
+  modal.style.top = `${rect.bottom + window.scrollY}px`;
+  modal.style.left = `${rect.left + window.scrollX}px`;
+  
+  modal.style.display = 'block';
+}
+
+function saveOption() {
+  const option = document.getElementById('optionSelect').value;
+  const date = selectedCell.parentElement.cells[0].textContent;
+  const month = selectedCell.closest('table').querySelector('.month-header').textContent;
+  const year = document.getElementById('yearInput').value || new Date().getFullYear();
+  const shift = selectedCell.cellIndex === 2 ? 'day' : 'night';
+  
+  const monthIndex = months.indexOf(month) + 1;
+  const key = `${year}-${monthIndex}-${date}`;
+  
+  if (option === 'ESCOLHA') {
+    localStorage.removeItem(key);
+    selectedCell.classList.remove('blink');
+    selectedCell.removeAttribute('title');
+  } else {
+    localStorage.setItem(key, `${shift}:${option}`);
+    selectedCell.classList.add('blink');
+    selectedCell.title = option;
+  }
+  
+  document.getElementById('optionsModal').style.display = 'none';
+}
+
+function updateMotivationalQuote() {
+  const quoteElement = document.getElementById('motivationalQuote');
+  const randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
+  quoteElement.innerHTML = `<span>${motivationalQuotes[randomIndex]}</span>`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const currentYear = new Date().getFullYear();
+  document.getElementById('currentYear').textContent = currentYear;
+  
+  const savedYear = localStorage.getItem('selectedYear') || currentYear;
+  const savedTeam = localStorage.getItem('selectedTeam') || "";
+  
+  document.getElementById('yearInput').value = savedYear;
+  document.getElementById('teamSelect').value = savedTeam;
+  
+  generateSchedule(savedYear);
+  highlightTeam(savedTeam);
+  updateMotivationalQuote();
+
+  const closeBtn = document.getElementsByClassName('close')[0];
+  closeBtn.onclick = function() {
+    document.getElementById('optionsModal').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('optionsModal');
+    if (event.target == modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  // Update motivational quote every day
+  setInterval(updateMotivationalQuote, 24 * 60 * 60 * 1000);
+});
+</script>
+</body>
+</html>
